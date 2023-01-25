@@ -17,8 +17,7 @@ class Niederlassung(Base):
     __tablename__ = 'Niederlassung'
     NlNr = Column('NLNr', Integer, primary_key=True, autoincrement=False)
     Ort  = Column('Ort', String(50))
-    ListeMitarbeiter = relationship("Mitarbeiter", 
-                                    back_populates="Niederlassung") 
+    ListeMitarbeiter = relationship("Mitarbeiter", back_populates="Niederlassung") 
 
 
 class Mitarbeiter(Base):
@@ -33,8 +32,20 @@ class Mitarbeiter(Base):
     Stundensatz   = Column('MitStundensatz', Float)
     NlNr          = Column('NLNr', Integer, ForeignKey(Niederlassung.NlNr))
     Niederlassung = relationship('Niederlassung', back_populates="ListeMitarbeiter")
-    ListeAuftrag  = relationship("Auftrag", 
-                                    back_populates="Mitarbeiter") 
+    ListeAuftrag  = relationship("Auftrag", back_populates="Mitarbeiter") 
+
+class Ersatzteil(Base):
+    """ Definition der Klasse "Ersatzteil"
+    """
+    __tablename__ = 'Ersatzteil'
+    EtID            = Column('EtID', String(5), primary_key=True, autoincrement=False)
+    EtBezeichnung   = Column('EtBezeichnung', String(100))
+    EtPreis         = Column('EtPreis', String(20))
+    EtAnzLager      = Column('EtAnzLager', Integer)
+    EtHersteller    = Column('EtHersteller', String(30))
+    ListeMontage = relationship('Montage', back_populates="Ersatzteil")
+
+
 
 
 class Kunde(Base):
@@ -46,8 +57,7 @@ class Kunde(Base):
     Ort     = Column('KunOrt', String(20))
     Plz     = Column('KunPLZ', String(5))
     Strasse = Column('KunStrasse', String(20))
-    ListeAuftrag  = relationship("Auftrag", 
-                                    back_populates="Kunde") 
+    ListeAuftrag  = relationship("Auftrag", back_populates="Kunde") 
 
     # autoincrement=False MUSS für das Primärschlüsselfeld gesetzt werden, wenn Daten in der Tabelle hinzugefügt
     # werden sollen
@@ -88,6 +98,7 @@ class Auftrag(Base):
     Anfahrt          = Column('Anfahrt', Integer, nullable=True)
     Mitarbeiter = relationship('Mitarbeiter', back_populates="ListeAuftrag")
     Kunde       = relationship('Kunde', back_populates="ListeAuftrag")
+    ListeMontage     = relationship('Montage', back_populates="Auftrag")
  
     def __init__(self, kunnr, aufdat):
         """ Definition des Constructors der Klasse Auftrag.
@@ -97,7 +108,6 @@ class Auftrag(Base):
         :param self - Referenz auf die Klasse selbst
         :param kunnr - Nummer des Kunden
         :param aufdat - Datum des Auftragseinganges
-
         """
         # Ermitteln der neuen Auftragsnummer
         session = sessionLoader()
@@ -109,16 +119,12 @@ class Auftrag(Base):
         self.Auftragsdatum = aufdat
 
 
-class Ersatzteile(Base):
-    """Definition der Klasse Ersatzteile"""
-    __tablename__ = 'Ersatzteilliste'
-    EtID = Column('EtID', String(4), primary_key = True, autoincrement=True)
-    EtBezeichnung = Column ('EtBezeichnung', String(100), nullable=True)
-    EtPreis = Column ('EtPreis', Float, nullable=True)
-    EtAnzLager = Column ('EtAnz', int, nullable=True)
-    EtHersteller = Column ('EtHersteller', String(30), nullable = True)
+class Montage(Base):
+    __tablename__ = 'Montage'
+    EtID          = Column('EtID', String(5), ForeignKey(Ersatzteil.EtID), primary_key=True, autoincrement=False)
+    AufNr         = Column('AufNr', Integer, ForeignKey(Auftrag.AufNr), primary_key=True, autoincrement=False)
+    Anzahl        = Column('Anzahl', Integer)
+    Ersatzteil    = relationship('Ersatzteil', back_populates="ListeMontage")
+    Auftrag       = relationship('Auftrag', back_populates="ListeMontage")
 
-    def __init__(self, etid, etbezeichnung):
-        """Definition des Konstruktors der Klasse Ersatzteile"""
 
-    

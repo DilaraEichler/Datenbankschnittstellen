@@ -13,6 +13,7 @@ def getAuftrag(p_mitnr):
     :return eingabe_aufnr - Auftragsnummer, die vom Benutzer eingegeben wurde
     :rtype  int
     """
+
     jetzt = datetime.datetime.now()  # ermitteln des aktuellen Datums
     aktuelle_woche = jetzt.isocalendar()[1]  # ermitteln der aktuellen Kalenderwoche
     naechste_woche = aktuelle_woche + 1  # ermitteln der nächsten Kalenderwoche
@@ -34,22 +35,33 @@ def getAuftrag(p_mitnr):
     print(f'{mitarbeiter.Name}, {mitarbeiter.Vorname} - {mitarbeiter.Geburtsdatum.strftime(format="%d.%m.%Y")}, {Mitarbeiter.Job}')
     print()
 
+
     # Alle Aufträge des Mitarbeiters ermitteln
     if len(mitarbeiter.ListeAuftrag) > 0:  # Überprüfung, ob Aufträge ermittelt werden konnten
         print(f'Die Aufträge des Mitarbeiters {mitarbeiter.Name} in den Kalenderwochen {aktuelle_woche} und {naechste_woche}:')
+        liste_auf = [0]
         for auf in mitarbeiter.ListeAuftrag:
             # Vergleich, ob das Erledigungsdatum in dieser oder der kommenden Kalenderwoche liegt
             if auf.Erledigungsdatum.isocalendar()[1] in (aktuelle_woche, naechste_woche):
                 # Zugriff auf die Kundendaten über die Beziehung, die in Klasse Auftrag definiert ist
                 print(f'{auf.AufNr} - {auf.MitId} {auf.Erledigungsdatum} {auf.Kunde.Name} {auf.Kunde.Plz} {auf.Kunde.Ort}')
                 anz_auftraege += 1  # Anzahl der ausgegebenen Aufträge hochzählen
-        # Falls keine Aufträge ausgegeben wurden (keine Aufträge in der kommenden Woche liegen)
-        if anz_auftraege == 0:
-            print('Der Mitarbeiter hat in dieser Zeit keine Aufträge')
-    print('-----------------------------------------------------------------')
-    print()
+                liste_auf.append(int(auf.AufNr))
+        print()
+                
+    # Falls keine Aufträge ausgegeben wurden (keine Aufträge in der kommenden Woche liegen)
+      #  if anz_auftraege == 0:
+     #       print('Der Mitarbeiter hat in dieser Zeit keine Aufträge')
+    #print('-----------------------------------------------------------------')
+    #print()
+        eingabe_aufnr = -1
+        while eingabe_aufnr not in liste_auf:
+            eingabe_aufnr = handleInputInteger('Auftragnummer eingeben')
+    else:
+        print('Es gibt keine Auftrag in diesem Mitarbeiter')
+        eingabe_aufnr = 0
     session.close()
-
+    return int(eingabe_aufnr)
 
 def anlegenAuftrag():
     """ Definition der Funktion anlegenAuftrag
@@ -169,4 +181,52 @@ def planenAuftrag():
     else:
         print('Keine neuen Aufträge vorhanden\n')
     session.close()
+
+def buchenAuftrag():
+
+    session = sessionLoader()
+    # ungeplante Aufträge der letzten 20 Tage abfragen und ausgeben
+    heute = datetime.datetime.now()
+    abdatum = heute - datetime.timedelta(days=20)
+    menge_auftrag = session.query(Auftrag) \
+        .filter(Auftrag.Erledigungsdatum != None, Auftrag.Erledigungsdatum > abdatum, Auftrag.Erledigungsdatum <= heute) \
+        .order_by(Auftrag.Erledigungsdatum).all()
+    if len(menge_auftrag) > 0:
+        liste_aufnr = [0]  # Liste der angezeigten Auftragsnummern initialisieren
+        for auf in menge_auftrag:
+            print(f' {auf.AufNr} - {auf.Auftragsdatum} {auf.Erledigungsdatum} - {auf.Kunde.Ort}')
+            liste_aufnr.append(auf.AufNr)  # Auftragsnummer zur Liste hinzufügen
+        
+        # Auftragsnummer eingeben lassen - muss in der erstellten Liste sein
+        eingabe_aufnr = -1
+        while eingabe_aufnr not in liste_aufnr:
+            eingabe_aufnr = handleInputInteger('Auftragsnummer')
+            print("")
+
+            #auftrag = session.query(Auftrag).get(eingabe_aufnr)
+            #auftrag1 = session.query(Auftrag).all()
+            auftrag = session.query(Auftrag) \
+                .filter(Auftrag.AufNr == eingabe_aufnr, Auftrag.Erledigungsdatum != None, Auftrag.Auftragsdatum > abdatum, Auftrag.Auftragsdatum <= heute) \
+                .order_by(Auftrag.Auftragsdatum).all()
+
+            if isinstance(auftrag, type(None)): 
+                print(f'Auftrag {eingabe_aufnr} existiert nicht in der Datenbank.')  
+                session.close()
+
+            if len(auftrag) > 0:
+                for au in auftrag:
+                    print(f' {au.AufNr} - {au.Dauer} - {au.Anfahrt}')
+            else:
+                print('Es gibt keine Auftrag')
+            
+            #P_Enter = handleInputInteger('Drücken Sie die Eingabetaste für weiter')
+
+    else:
+        print('Keine neuen Aufträge vorhanden\n')
+
+    print()
+    P_Enter = handleInputInteger('Drücken Sie die Eingabetaste für weiter')
+    print()
     
+    session.close()
+    return int(eingabe_aufnr)
